@@ -1,14 +1,14 @@
 # Risk Summary for local AI coding sessions
 
 `rs` (Risk Summary) scans your local AI coding sessions (Claude Code, Cursor,
-OpenCode) for PII and secrets **entirely on your machine** (no gateway, no
+OpenCode) for PII and secrets **on your machine** (no gateway, no
 network) and produces a risk summary in the terminal plus a self-contained HTML
 report you can open or share.
 
 Detection runs in-process. The default engine pairs the
 [alcatraz](https://github.com/hoophq/alcatraz) PII library with a local secrets
-pack (API keys, private keys, passwords); a zero-dependency regex engine is also
-available with `-engine stub`. No external DLP service, no API calls.
+pack (API keys, private keys, passwords). Pass `-engine stub` for a
+zero-dependency regex engine. No external DLP service, no API calls.
 
 ```
 ┌──────────────┐   ┌──────────────┐   ┌──────────────┐   ┌──────────────┐
@@ -84,7 +84,7 @@ Common options:
 | `-days` | `0` (all time) | Only sessions started within the last N days |
 | `-home` | `$HOME` | Home directory to discover sessions under |
 | `-rules` | _(none)_ | Guardrails rules JSON file |
-| `-min-score` | `0.4` | Minimum detection confidence (0–1) to count |
+| `-min-score` | `0.4` | Minimum detection confidence (0 to 1) to count |
 | `-engine` | `alcatraz` | Detection engine: `alcatraz` (full PII set) or `stub` (zero-dependency fallback) |
 | `-incremental` | `false` | Only scan content appended since the last run |
 | `-state` | `~/.risk-analyzer/state.json` | Incremental scan state file |
@@ -93,8 +93,8 @@ Common options:
 | `-version` | `false` | Print the rs version and exit |
 
 By default every run is a full snapshot of all your sessions. `-incremental`
-persists per-file byte offsets so subsequent runs only read newly appended
-content (useful for "what changed since last time").
+persists per-file byte offsets so subsequent runs read only the content appended
+since the last run (useful for "what changed since last time").
 
 ## What it detects
 
@@ -111,9 +111,9 @@ sessions (via rs's own secrets pack):
 - **Health**: medical license; UK NHS and AU Medicare numbers.
 - **Contact / network**: email, phone, IP address, URL.
 
-Detection is **pattern + validator** based: regexes plus checksum and format
-validators (Luhn, IBAN mod-97, SSN/national-ID range rules). Matches below the
-`-min-score` threshold (default 0.4) are dropped.
+Detection pairs regex **patterns** with checksum and format **validators**
+(Luhn, IBAN mod-97, SSN/national-ID range rules). `rs` drops matches below the
+`-min-score` threshold (default 0.4).
 
 > **Note on NER:** `PERSON`/`LOCATION`-style entities that need an NLP model stay
 > out of this version. The analyzer sits behind a small `analyze.Analyzer`
@@ -123,7 +123,7 @@ validators (Luhn, IBAN mod-97, SSN/national-ID range rules). Matches below the
 
 - **Tier** per session: `critical` (any high-severity entity), `minor`
   (medium-severity only), or `low`.
-- **Exposure** ranks sessions by a severity-weighted finding count that weights
+- **Exposure** ranks sessions by a severity-weighted finding count that favors
   output (data pulled into the agent context) over input.
 - **Security Score** = `clamp(0, 100, round(100 − 60·critical/total − 20·minor/total))`.
 
@@ -148,9 +148,9 @@ assistant/tool output). See [`examples/guardrails.json`](examples/guardrails.jso
 
 ## Privacy
 
-Everything runs locally. The HTML/JSON reports contain **only** entity types,
-counts, severities, and session identifiers, never the matched values. Nothing
-leaves your machine.
+Everything runs on your machine. The HTML/JSON reports contain **only** entity
+types, counts, severities, and session identifiers, never the matched values.
+Nothing leaves your machine.
 
 ## Layout
 
