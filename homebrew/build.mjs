@@ -9,7 +9,8 @@
 //
 // Everything lands in homebrew/dist/:
 //   hooprs_<version>_<os>_<arch>.tar.gz   uploaded to the GitHub release
-//   hooprs.rb                             copied into the hoophq/homebrew-tap repo
+//   hooprs.rb                             committed to Formula/ on main — this
+//                                         repo doubles as its own brew tap
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";

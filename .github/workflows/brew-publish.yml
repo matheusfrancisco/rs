@@ -2,8 +2,9 @@ name: Publish to Homebrew
 
 # Auto Release creates the vX.Y.Z tag/release with GITHUB_TOKEN, and a tag pushed
 # by GITHUB_TOKEN cannot start a `push: tags` workflow. So this chains off Auto
-# Release's completion: it uploads the brew archives to that release and points
-# the tap formula at them.
+# Release's completion: it uploads the brew archives to that release and commits
+# the formula to Formula/ on main — this repo doubles as its own brew tap
+# (`brew tap hoophq/rs https://github.com/hoophq/rs.git`).
 on:
   workflow_run:
     workflows: ["Auto Release"]
@@ -11,6 +12,12 @@ on:
 
 permissions:
   contents: write
+
+# Serialize runs: back-to-back releases would otherwise race on pushing the
+# formula commit to main.
+concurrency:
+  group: brew-publish
+  cancel-in-progress: false
 
 jobs:
   resolve:
@@ -78,14 +85,17 @@ jobs:
           # "asset already exists".
           gh release upload "$TAG" homebrew/dist/*.tar.gz --clobber --repo "${{ github.repository }}"
 
-      - name: Check out the tap
+      - name: Check out main for the formula commit
         uses: actions/checkout@v4
         with:
-          # A cross-repo push needs a token with write access to the tap; the
-          # default GITHUB_TOKEN is scoped to this repo only.
-          repository: hoophq/homebrew-tap
-          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          # The formula lives in this same repo (it is its own brew tap), so the
+          # default GITHUB_TOKEN suffices — no cross-repo PAT. The build above
+          # ran from head_sha; the formula commit must land on current main.
+          ref: main
           path: tap
+          # Full history so the pull --rebase below always finds the merge base
+          # even when main moves between checkout and push.
+          fetch-depth: 0
 
       - name: Update and push the formula
         env:
@@ -103,6 +113,11 @@ jobs:
           if git diff --cached --quiet; then
             echo "Formula already up to date for v${VERSION}; nothing to push."
           else
-            git commit -m "hooprs ${VERSION}"
-            git push
+            git commit -m "brew formula for hooprs ${VERSION}"
+            # main may have moved since checkout (another merge landing); rebase
+            # the formula commit on top instead of failing the push. This push
+            # uses GITHUB_TOKEN, so it does not trigger other workflows (and
+            # Auto Release skips direct pushes regardless) — no release loop.
+            git pull --rebase origin main
+            git push origin main
           fi

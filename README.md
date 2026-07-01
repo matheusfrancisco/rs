@@ -26,9 +26,11 @@ zero-dependency regex engine. No external DLP service, no API calls.
 ### Homebrew
 
 ```bash
-brew install hoophq/tap/hooprs
+brew tap hoophq/rs https://github.com/hoophq/rs.git
+brew install hooprs
 ```
 
+This repository is its own tap (the formula lives in [`Formula/`](Formula/)).
 Prebuilt, no compile step. Covers macOS (arm64, x64) and Linux (x64, arm64).
 
 ### npm
